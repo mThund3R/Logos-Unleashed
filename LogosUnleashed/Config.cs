@@ -72,49 +72,67 @@ public class Config : Configurable<Config>
     [DisplayName("Is XInput Controller Enabled?")]
     [Description("Whether custom XInput gamepad input is enabled.")]
     [DefaultValue(true)]
-    [Category(".Input")]
+    [Category(".ControllerInput")]
     public bool isControllerEnabled { get; set; } = true;
 
     [DisplayName("Is DualSense Controller Enabled?")]
     [Description("Whether custom DualSense controller input is enabled.\nEXPERIMENTAL!")]
     [DefaultValue(false)]
-    [Category(".Input")]
+    [Category(".ControllerInput")]
     public bool isDualSenseEnabled { get; set; } = false;
 
     [DisplayName("Is Keyboard Enabled?")]
-    [Description("Whether custom keyboard input is enabled. \nWARNING: This is a global key interceptor, which will capture keys even if the game is not focused!\nFurthermore, the system and keybinds are experimental. Feel free to send your feedback on the Logos Unleashed Nexusmods page!")]
+    [Description("Whether custom keyboard input is enabled. \nWARNING: This is a global key interceptor, which will capture keys even if the game is not focused!\nFurthermore, disabling this at runtime will only apply changes on game restart.")]
+    [DefaultValue(true)]
+    [Category(".KeyboardInput")]
+    public bool isKeyboardEnabled { get; set; } = true;
+
+    [DisplayName("Are Directional Inputs Limited To Button Hold?")]
+    [Description("If enabled, diretional inputs can only be performed while holding a configurable button.")]
     [DefaultValue(false)]
-    [Category(".Input")]
-    public bool isKeyboardEnabled { get; set; } = false;
+    [Category(".GeneralInput")]
+    public bool isDirectionalButtonHold { get; set; } = false;
+
+    [DisplayName("[Gamepad / DualSense] Enable Directional Inputs Keybind")]
+    [Description("When \"Are Directional Inputs Limited To Button Hold\" is enabled, hold this keybind to enable directional inputs.\nRecommended to use the in-game lock on button, and to set lock on mode on hold.")]
+    [DefaultValue(ButtonFlags.LeftBumper)]
+    [Category(".ControllerInput")]
+    public ButtonFlags directionalHoldKeybind { get; set; } = ButtonFlags.LeftBumper;
+
+    [DisplayName("[Keyboard] Enable Directional Inputs Keybind")]
+    [Description("When \"Are Directional Inputs Limited To Button Hold\" is enabled, hold this keybind to enable directional inputs.\nRecommended to use the in-game lock on button, and to set lock on mode on hold.")]
+    [DefaultValue(Key.LeftShift)]
+    [Category(".KeyboardInput")]
+    public Key directionalHoldKeybindKeyboard { get; set; } = Key.LeftShift;
 
     [DisplayName("[Gamepad / DualSense] Combo Finisher Keybind")]
     [Description("Hold this keybind and attack to perform combo finishers.")]
     [DefaultValue(ButtonFlags.LeftThumb)]
-    [Category(".Input")]
+    [Category(".ControllerInput")]
     public ButtonFlags alternateComboKeybind { get; set; } = ButtonFlags.LeftThumb;
 
     [DisplayName("[Keyboard] Combo Finisher Keybind")]
     [Description("Hold this keybind and attack to perform combo finishers.")]
     [DefaultValue(Key.X)]
-    [Category(".Input")]
+    [Category(".KeyboardInput")]
     public Key alternateComboKeybindKeyboard { get; set; } = Key.X;
 
     [DisplayName("[Gamepad / DualSense] Special Attack Keybind")]
     [Description("Special (non-directional) attack keybind.")]
     [DefaultValue(ButtonTriggerFlags.RightTrigger)]
-    [Category(".Input")]
+    [Category(".ControllerInput")]
     public ButtonTriggerFlags specialAttackKeybind { get; set; } = ButtonTriggerFlags.RightTrigger;
 
     [DisplayName("[Keyboard] Special Attack Keybind")]
     [Description("Special (non-directional) attack keybind.")]
     [DefaultValue(Key.CapsLock)]
-    [Category(".Input")]
+    [Category(".KeyboardInput")]
     public Key specialAttackKeybindKeyboard { get; set; } = Key.CapsLock;
     
     [DisplayName("[Gamepad] LStick Deadzone")]
     [Description("This controls the deadzone of the left stick inputs.")]
     [DefaultValue(16500)]
-    [Category(".Input")]
+    [Category(".ControllerInput")]
     [SliderControlParams(
         minimum: 0.0,
         maximum: 32767.0,
@@ -124,48 +142,29 @@ public class Config : Configurable<Config>
         isSnapToTickEnabled: true,
         tickPlacement:SliderControlTickPlacement.None,
         showTextField: true,
-        isTextFieldEditable: true,
-        textValidationRegex: "\\d{1-3}")]
+        isTextFieldEditable: true)]
     public int deadZoneVertical { get; set; } = 16500;
+
+    [DisplayName("[DualSense] Polling Rate")]
+    [Description("This controls the polling rate in ms of all DualSense inputs.\nYou can lower it to 1 if you're using a DualSense Edge. Do not set to 0.")]
+    [DefaultValue((uint)4)]
+    [Category(".ControllerInput")]
+    [SliderControlParams(
+        minimum: 0.0,
+        maximum: 1000.0,
+        smallChange: 1.0,
+        largeChange: 10.0,
+        tickFrequency: 1,
+        isSnapToTickEnabled: true,
+        tickPlacement:SliderControlTickPlacement.None,
+        showTextField: true,
+        isTextFieldEditable: true)]
+    public uint dualSensePollingRate { get; set; } = 4;
 
     [DisplayName("[DualSense] LStick Deadzone")]
     [Description("This controls the deadzone of the left stick inputs.")]
-    [DefaultValue(0.5f)]
-    [Category(".Input")]
-    [SliderControlParams(
-        minimum: 0.0,
-        maximum: 1.0,
-        smallChange: 0.0f,
-        largeChange: 0.1f,
-        tickFrequency: 1,
-        isSnapToTickEnabled: false,
-        tickPlacement:SliderControlTickPlacement.None,
-        showTextField: true,
-        isTextFieldEditable: true,
-        textValidationRegex: "\\d{1-3}")]
-    public float deadZoneVerticalDualSense { get; set; } = 0.5f;
-
-    [DisplayName("[Gamepad] Trigger Deadzone")]
-    [Description("This controls the deadzone of the trigger (R2 / RT, L2 / LT) inputs.")]
-    [DefaultValue(20)]
-    [Category(".Input")]
-    [SliderControlParams(
-        minimum: 0.0,
-        maximum: 255.0,
-        smallChange: 1.0,
-        largeChange: 10.0,
-        tickFrequency: 10,
-        isSnapToTickEnabled: false,
-        tickPlacement:SliderControlTickPlacement.None,
-        showTextField: true,
-        isTextFieldEditable: true,
-        textValidationRegex: "\\d{1-3}")]
-    public int deadZoneR2 { get; set; } = 20;
-
-    [DisplayName("[DualSense] Trigger Deadzone")]
-    [Description("This controls the deadzone of the trigger (R2, L2) inputs.")]
-    [DefaultValue(0.08f)]
-    [Category(".Input")]
+    [DefaultValue(0.3f)]
+    [Category(".ControllerInput")]
     [SliderControlParams(
         minimum: 0.0,
         maximum: 1.0,
@@ -175,33 +174,64 @@ public class Config : Configurable<Config>
         isSnapToTickEnabled: false,
         tickPlacement:SliderControlTickPlacement.None,
         showTextField: true,
-        isTextFieldEditable: true,
-        textValidationRegex: "\\d{1-3}")]
+        isTextFieldEditable: true)]
+    public float deadZoneVerticalDualSense { get; set; } = 0.3f;
+
+    [DisplayName("[Gamepad] Trigger Deadzone")]
+    [Description("This controls the deadzone of the trigger (R2 / RT, L2 / LT) inputs.")]
+    [DefaultValue(20)]
+    [Category(".ControllerInput")]
+    [SliderControlParams(
+        minimum: 0.0,
+        maximum: 255.0,
+        smallChange: 1.0,
+        largeChange: 10.0,
+        tickFrequency: 10,
+        isSnapToTickEnabled: false,
+        tickPlacement:SliderControlTickPlacement.None,
+        showTextField: true,
+        isTextFieldEditable: true)]
+    public int deadZoneR2 { get; set; } = 20;
+
+    [DisplayName("[DualSense] Trigger Deadzone")]
+    [Description("This controls the deadzone of the trigger (R2, L2) inputs.")]
+    [DefaultValue(0.08f)]
+    [Category(".ControllerInput")]
+    [SliderControlParams(
+        minimum: 0.0,
+        maximum: 1.0,
+        smallChange: 0.01f,
+        largeChange: 0.1f,
+        tickFrequency: 1,
+        isSnapToTickEnabled: false,
+        tickPlacement:SliderControlTickPlacement.None,
+        showTextField: true,
+        isTextFieldEditable: true)]
     public float deadZoneR2DualSense { get; set; } = 0.08f;
 
-    [DisplayName("[Gamepad / DualSense] Upward Flight Keybind")]
-    [Description("Press alongside Special Attack keybind to fly upwards with Wings of Flight.")]
-    [DefaultValue(ButtonFlags.A_Cross)]
-    [Category(".Input")]
-    public ButtonFlags flyUpKeybindController { get; set; } = ButtonFlags.A_Cross;
+    // [DisplayName("[Gamepad / DualSense] Upward Flight Keybind")]
+    // [Description("Press alongside Special Attack keybind to fly upwards with Wings of Flight.")]
+    // [DefaultValue(ButtonFlags.A_Cross)]
+    // [Category(".ControllerInput")]
+    // public ButtonFlags flyUpKeybindController { get; set; } = ButtonFlags.A_Cross;
 
-    [DisplayName("[Keyboard] Upward Flight Keybind")]
-    [Description("Press alongside Special Attack keybind to fly upwards with Wings of Flight.")]
-    [DefaultValue(Key.Space)]
-    [Category(".Input")]
-    public Key flyUpKeybindKeyboard { get; set; } = Key.Space;
+    // [DisplayName("[Keyboard] Upward Flight Keybind")]
+    // [Description("Press alongside Special Attack keybind to fly upwards with Wings of Flight.")]
+    // [DefaultValue(Key.Space)]
+    // [Category(".KeyboardInput")]
+    // public Key flyUpKeybindKeyboard { get; set; } = Key.Space;
 
-    [DisplayName("[Gamepad / DualSense] Downward Flight Keybind")]
-    [Description("Press alongside Special Attack keybind to fly downwards with Wings of Flight.")]
-    [DefaultValue(ButtonFlags.LeftThumb)]
-    [Category(".Input")]
-    public ButtonFlags flyDownKeybindController { get; set; } = ButtonFlags.LeftThumb;
+    // [DisplayName("[Gamepad / DualSense] Downward Flight Keybind")]
+    // [Description("Press alongside Special Attack keybind to fly downwards with Wings of Flight.")]
+    // [DefaultValue(ButtonFlags.LeftThumb)]
+    // [Category(".ControllerInput")]
+    // public ButtonFlags flyDownKeybindController { get; set; } = ButtonFlags.LeftThumb;
 
-    [DisplayName("[Keyboard] Downward Flight Keybind")]
-    [Description("Press alongside Special Attack keybind to fly downwards with Wings of Flight.")]
-    [DefaultValue(Key.Ctrl)]
-    [Category(".Input")]
-    public Key flyDownKeybindKeyboard { get; set; } = Key.Ctrl;
+    // [DisplayName("[Keyboard] Downward Flight Keybind")]
+    // [Description("Press alongside Special Attack keybind to fly downwards with Wings of Flight.")]
+    // [DefaultValue(Key.Ctrl)]
+    // [Category(".KeyboardInput")]
+    // public Key flyDownKeybindKeyboard { get; set; } = Key.Ctrl;
 
 
     [DisplayName("Attack I")]
@@ -210,17 +240,17 @@ public class Config : Configurable<Config>
     public int attack1 { get; set; } = 503; //Titanic Counter finisher
 
     [DisplayName("Attack II")]
-    [DefaultValue(881)]
+    [DefaultValue(5103)]
     [Category("Base / LB Combo String Finisher")]
     public int attack2 { get; set; } = 881; //Odin lunge finisher
 
     [DisplayName("Attack III")]
-    [DefaultValue(422)]
+    [DefaultValue(5106)]
     [Category("Base / LB Combo String Finisher")]
     public int attack3 { get; set; } = 422; //Garuda Gouge
 
     [DisplayName("Attack IV")]
-    [DefaultValue(190)]
+    [DefaultValue(5107)]
     [Category("Base / LB Combo String Finisher")]
     public int attack4 { get; set; } = 190; //Slash and punch ground finisher
 
@@ -291,7 +321,7 @@ public class Config : Configurable<Config>
     public int attackLogosFinisher3 { get; set; } = 5110; //Dancing Steel into Upheaval
 
     [DisplayName("Attack IV")]
-    [DefaultValue(190)]
+    [DefaultValue(5107)]
     [Category("Logos Combo String Finisher")]
     public int attackLogosFinisher4 { get; set; } = 190; //Slash and punch ground finisher
 

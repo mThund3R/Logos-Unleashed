@@ -74,10 +74,16 @@ public class Mod : ModBase // <= Do not Remove.
     
     public static bool isComboFinisherActive = false;
 
-    public static int[] groundLogosVanilla = { 139, 358, 4602, 1162 };
+    public KeyInterceptor? interceptor;
+
+    public static Thread? keyboardInputThread;
+    public static Thread? controllerInputThread;
+    public static Thread? dualSenseInputThread;
+
+    public static int[] groundLogosVanilla = { 139, 358, 5104, 1162 };
     public static int[] airLogosVanilla = { 297, 298, 299};
     public static int[] groundLogosSpin = { 143, 143, 183, 183 };
-    public static int[] groundLogosStinger = { 163, 163, 163, 163 };
+    public static int[] groundLogosStinger = { 4996, 4996, 4996, 4996 };
 
     public static int[] groundLogosBurstVanilla = { 199, 200, 201, 202 };
     public static int[] airLogosBurstVanilla = { 424, 424, 424 };
@@ -107,6 +113,10 @@ public class Mod : ModBase // <= Do not Remove.
         }
 
         nextExcelDBApi.OnNexLoaded += NextExcelDBApi_OnNexLoaded;
+
+        keyboardInputThread = new Thread(KeyboardInputThread);
+        controllerInputThread = new Thread(ControllerInputThread);
+        dualSenseInputThread = new Thread(DualSenseInputThread);
     }
 
     /// <summary>
@@ -129,9 +139,8 @@ public class Mod : ModBase // <= Do not Remove.
 
         if (_configuration.isKeyboardEnabled)
         {
-            _logger.WriteLine($"[{_modConfig.ModId}] Keyboard input has been enabled. Send your feedback on the nexus!", _logger.ColorYellow);
-            Thread keyboardInputThread = new Thread(new ThreadStart(KeyboardInputThread));
-            keyboardInputThread.IsBackground = true;
+            // _logger.WriteLine($"[{_modConfig.ModId}] Keyboard input has been enabled. Send your feedback on the nexus!", _logger.ColorYellow);
+            keyboardInputThread!.IsBackground = true;
             keyboardInputThread.Start();
         }
         else
@@ -139,8 +148,7 @@ public class Mod : ModBase // <= Do not Remove.
 
         if (_configuration.isControllerEnabled)
         {
-            Thread controllerInputThread = new Thread(new ThreadStart(ControllerInputThread));
-            controllerInputThread.IsBackground = true;
+            controllerInputThread!.IsBackground = true;
             controllerInputThread.Start();
         }
         else
@@ -148,9 +156,8 @@ public class Mod : ModBase // <= Do not Remove.
 
         if (_configuration.isDualSenseEnabled)
         {
-            _logger.WriteLine($"[{_modConfig.ModId}] Experimental DualSense input has been enabled. Not recommended! Use a XInput emulator instead.", _logger.ColorYellow);
-            Thread dualSenseInputThread = new Thread(new ThreadStart(DualSenseInputThread));
-            dualSenseInputThread.IsBackground = true;
+            _logger.WriteLine($"[{_modConfig.ModId}] Experimental DualSense input has been enabled. Send your feedback on the Nexus!", _logger.ColorYellow);
+            dualSenseInputThread!.IsBackground = true;
             dualSenseInputThread.Start();
         }
         else
@@ -161,10 +168,10 @@ public class Mod : ModBase // <= Do not Remove.
             _logger.WriteLine($"[{_modConfig.ModId}] Support for all input devices is disabled. Mod will not work properly.", _logger.ColorRed);
         }
 
-        ReplaceComboStrings();
+        // ReplaceComboStrings();
     }
 
-    private void KeyboardInputThread()
+    private void KeyboardShortcutMake()
     {
         Shortcut[] shortcuts =
         [
@@ -178,31 +185,45 @@ public class Mod : ModBase // <= Do not Remove.
             new Shortcut(_configuration.alternateComboKeybindKeyboard, state: KeyState.Down, name: "X Down"),
             new Shortcut(_configuration.alternateComboKeybindKeyboard, state: KeyState.Up, name: "X Up"),
 
-            new Shortcut(_configuration.flyUpKeybindKeyboard, state: KeyState.Down, name: "FlyUp Down"),
-            new Shortcut(_configuration.flyUpKeybindKeyboard, state: KeyState.Up, name: "FlyUp Up"),
-            new Shortcut(_configuration.flyDownKeybindKeyboard, state: KeyState.Down, name: "FlyDown Down"),
-            new Shortcut(_configuration.flyDownKeybindKeyboard, state: KeyState.Up, name: "FlyDown Up"),
+            // new Shortcut(_configuration.flyUpKeybindKeyboard, state: KeyState.Down, name: "FlyUp Down"),
+            // new Shortcut(_configuration.flyUpKeybindKeyboard, state: KeyState.Up, name: "FlyUp Up"),
+            // new Shortcut(_configuration.flyDownKeybindKeyboard, state: KeyState.Down, name: "FlyDown Down"),
+            // new Shortcut(_configuration.flyDownKeybindKeyboard, state: KeyState.Up, name: "FlyDown Up"),
+            
+            new Shortcut(_configuration.directionalHoldKeybindKeyboard, state: KeyState.Down, name: "Directional Down"),
+            new Shortcut(_configuration.directionalHoldKeybindKeyboard, state: KeyState.Up, name: "Directional Up"),
         ];
 
-        var interceptor = new KeyInterceptor(shortcuts);
+        interceptor = new KeyInterceptor(shortcuts);
+    }
+
+    private void KeyboardInputThread()
+    {
+        KeyboardShortcutMake();
 
         bool wDown = false;
         bool sDown = false;
         bool clDown = false;
 
-        interceptor.ShortcutPressed += (_, e) =>
+        bool directionalDown;
+        if (_configuration.isDirectionalButtonHold)
+            directionalDown = false;
+        else
+            directionalDown = true;
+
+        interceptor!.ShortcutPressed += (_, e) =>
         {
             switch (e.Shortcut.Name)
             {
                 case "W Down":
-                    if (!clDown && !sDown)
+                    if (!clDown && !sDown && directionalDown)
                     {
                         DoUpAttack();
                         wDown = true;
                     }
                     break;
                 case "S Down":
-                    if (!clDown && !wDown)
+                    if (!clDown && !wDown && directionalDown)
                     {
                         sDown = true;
                         DoDownAttack();
@@ -250,6 +271,24 @@ public class Mod : ModBase // <= Do not Remove.
                 case "FlyDown Up":
                     UndoFlyDown();
                     break;
+
+                case "Directional Down":
+                    if (_configuration.isDirectionalButtonHold)
+                    {
+                        directionalDown = true;
+                    }
+                    break;
+                case "Directional Up":
+                    if (_configuration.isDirectionalButtonHold)
+                    {
+                        directionalDown = false;
+                        if (!clDown)
+                        {
+                            UndoUpAttack();
+                            UndoDownAttack();
+                        }
+                    }
+                    break;
             }
         };
 
@@ -258,776 +297,289 @@ public class Mod : ModBase // <= Do not Remove.
 
     private void ControllerInputThread()
     {
-        if (!controller.IsConnected)
-        {
-            _logger.WriteLine($"[{_modConfig.ModId}] XInput Gamepad not found. Is it compatible with XInput?", _logger.ColorYellow);
-        }
-
         GamepadButtonFlags previousButtons = 0;
-        //byte previousLeftTrigger = 0;
-        byte previousTrigger = 0;
+        byte previousLeftTrigger = 0;
+        byte previousRightTrigger = 0;
         int previousLeftStickY = 0;
 
-        int deadZoneVertical = _configuration.deadZoneVertical;
-        int deadZoneR2 = _configuration.deadZoneR2;
-        GamepadButtonFlags specialAttackKeybind = (GamepadButtonFlags)_configuration.specialAttackKeybind;
-        GamepadButtonFlags alternateComboKeybind = (GamepadButtonFlags)_configuration.alternateComboKeybind;
-        // GamepadButtonFlags switchStyleKeybind = GamepadButtonFlags.RightThumb;
+        var isTriggerHeld = false;
+        var isDirectionalHeld = false;
 
-        GamepadButtonFlags flyUpKeybind = (GamepadButtonFlags)_configuration.flyUpKeybindController;
-        GamepadButtonFlags flyDownKeybind = (GamepadButtonFlags)_configuration.flyDownKeybindController;
-
-        if (_configuration.specialAttackKeybind == ButtonTriggerFlags.LeftTrigger || _configuration.specialAttackKeybind == ButtonTriggerFlags.RightTrigger)
+        while(controller.IsConnected && _configuration.isControllerEnabled)
         {
-            while(true)
+            var state = controller.GetState();
+            GamepadButtonFlags currentButtons = state.Gamepad.Buttons;
+
+            int deadZoneVertical = _configuration.deadZoneVertical;
+            int deadZoneR2 = _configuration.deadZoneR2;
+            GamepadButtonFlags specialAttackKeybind = (GamepadButtonFlags)_configuration.specialAttackKeybind;
+            GamepadButtonFlags alternateComboKeybind = (GamepadButtonFlags)_configuration.alternateComboKeybind;
+
+            // GamepadButtonFlags flyUpKeybind = (GamepadButtonFlags)_configuration.flyUpKeybindController;
+            // GamepadButtonFlags flyDownKeybind = (GamepadButtonFlags)_configuration.flyDownKeybindController;
+
+            GamepadButtonFlags directionalHoldKeybind = (GamepadButtonFlags)_configuration.directionalHoldKeybind;
+
+            int currentLeftStickY = state.Gamepad.LeftThumbY;
+            byte currentLeftTrigger = state.Gamepad.LeftTrigger;
+            byte currentRightTrigger = state.Gamepad.RightTrigger;
+            
+            if (_configuration.specialAttackKeybind == ButtonTriggerFlags.LeftTrigger)
             {
-                if (controller.IsConnected)
-                {   
-                    var state = controller.GetState();
-    
-                    GamepadButtonFlags currentButtons = state.Gamepad.Buttons;
-                    byte currentTrigger;
-                    int currentLeftStickY = state.Gamepad.LeftThumbY;
-
-                    if (_configuration.specialAttackKeybind == ButtonTriggerFlags.LeftTrigger)
-                        currentTrigger = state.Gamepad.LeftTrigger;
-                    else
-                        currentTrigger = state.Gamepad.RightTrigger;
-    
-                    if (currentTrigger > deadZoneR2)
-                    {
-                        // if ((currentButtons & switchStyleKeybind) != 0 && (previousButtons & switchStyleKeybind) == 0)
-                        // {
-                        //     _logger.WriteLine("RT + Right Thumb just pressed!");
-                        //     SwitchStyle();
-                        // }
-    
-                        if (previousTrigger <= deadZoneR2)
-                        {
-                            //_logger.WriteLine("RT just pressed!");
-                            DoSpecialAttack();
-
-                            // if ((currentButtons & flyUpKeybind) == 0 && (previousButtons & flyUpKeybind) != 0)
-                            // {
-                            //     DoFlyUp();
-                            // }
-                            // if ((currentButtons & flyDownKeybind) == 0 && (previousButtons & flyDownKeybind) != 0)
-                            // {
-                            //     DoFlyDown();
-                            // }
-                        }
-                    }
-                    else
-                    {
-                        if (previousTrigger > deadZoneR2)
-                        {
-                            //_logger.WriteLine("RT just released!");
-                            UndoSpecialAttack();
-
-                            // UndoFlyUp();
-                            // UndoFlyDown();
-                        }
-                    }
-    
-                    if (currentLeftStickY > deadZoneVertical && currentTrigger <= deadZoneR2)
-                    {
-                        // _logger.WriteLine("Up pressed");
-                        DoUpAttack();
-                    }
-                    else if (currentLeftStickY <= deadZoneVertical && previousLeftStickY > deadZoneVertical)
-                    {
-                        // _logger.WriteLine("Up just released");
-                        UndoUpAttack();
-                    }
-                    
-                    if (currentLeftStickY < deadZoneVertical * (-1) && currentTrigger <= deadZoneR2)
-                    {
-                        // _logger.WriteLine("Down pressed");
-                        DoDownAttack();
-                    }
-                    else if (currentLeftStickY >= deadZoneVertical * (-1) && previousLeftStickY < deadZoneVertical * (-1))
-                    {
-                        // _logger.WriteLine("Down just released");
-                        UndoDownAttack();
-                    }
-    
-                    if ((currentButtons & alternateComboKeybind) != 0 && (previousButtons & alternateComboKeybind) == 0)
-                    {
-                        DoComboFinisher();
-                    }
-                    else if ((currentButtons & alternateComboKeybind) == 0 && (previousButtons & alternateComboKeybind) != 0)
-                    {
-                        UndoComboFinisher();
-                    }
-
-                    if ((currentButtons & flyDownKeybind) != 0 && (previousButtons & flyDownKeybind) == 0)
-                    {
-                        DoFlyDown();
-                    }
-                    if ((currentButtons & flyDownKeybind) == 0 && (previousButtons & flyDownKeybind) != 0)
-                    {
-                        UndoFlyDown();
-                    }
-    
-                    previousButtons = currentButtons;
-                    // previousLeftTrigger = currentLeftTrigger;
-                    previousTrigger = currentTrigger;
-                    previousLeftStickY = currentLeftStickY;
-                }
-                else
+                if (currentLeftTrigger > deadZoneR2)
                 {
-                    Thread.Sleep(1000); //Prevent stuttering
+                    DoSpecialAttack();
+                    isTriggerHeld = true;
+                }
+                else if (currentLeftTrigger <= deadZoneR2 && previousLeftTrigger > deadZoneR2)
+                {
+                    UndoSpecialAttack();
+                    isTriggerHeld = false;
                 }
             }
-        }
-        else
-        {
-            while(true)
+
+            if (_configuration.specialAttackKeybind == ButtonTriggerFlags.RightTrigger)
             {
-                if (controller.IsConnected)
+                if (currentRightTrigger > deadZoneR2)
                 {
-                    var state = controller.GetState();
-    
-                    GamepadButtonFlags currentButtons = state.Gamepad.Buttons;
-                    int currentLeftStickY = state.Gamepad.LeftThumbY;
-    
-                    if ((currentButtons & specialAttackKeybind) != 0)
-                    {
-                        DoSpecialAttack();
+                    DoSpecialAttack();
+                    isTriggerHeld = true;
+                }
+                else if (currentRightTrigger <= deadZoneR2 && previousRightTrigger > deadZoneR2)
+                {
+                    UndoSpecialAttack();
+                    isTriggerHeld = false;
+                }
+            }
 
-                        // if ((currentButtons & flyUpKeybind) == 0 && (previousButtons & flyUpKeybind) != 0)
-                        // {
-                        //     DoFlyUp();
-                        // }
-                        // if ((currentButtons & flyDownKeybind) == 0 && (previousButtons & flyDownKeybind) != 0)
-                        // {
-                        //     DoFlyDown();
-                        // }
-                    }
-                    else if ((previousButtons & specialAttackKeybind) != 0)
-                    {
-                        UndoSpecialAttack();
+            if (_configuration.specialAttackKeybind != ButtonTriggerFlags.RightTrigger && _configuration.specialAttackKeybind != ButtonTriggerFlags.LeftTrigger)
+            {
+                if ((currentButtons & specialAttackKeybind) != 0)
+                {
+                    DoSpecialAttack();
+                    isTriggerHeld = true;
+                }
+                else if ((currentButtons & specialAttackKeybind) == 0 && (previousButtons & specialAttackKeybind) != 0)
+                {
+                    UndoSpecialAttack();
+                    isTriggerHeld = false;
+                }
+            }
 
-                        // UndoFlyUp();
-                        // UndoFlyDown();
-                    }
-    
-                    if (currentLeftStickY > deadZoneVertical && (currentButtons & specialAttackKeybind) == 0)
+            if (_configuration.isDirectionalButtonHold)
+            {
+                if ((currentButtons & directionalHoldKeybind) != 0 && (previousButtons & directionalHoldKeybind) == 0)
+                {
+                    isDirectionalHeld = true;
+                }
+                else if ((currentButtons & directionalHoldKeybind) == 0 && (previousButtons & directionalHoldKeybind) != 0)
+                {
+                    if (!isTriggerHeld)
                     {
-                        // _logger.WriteLine("Up pressed");
-                        DoUpAttack();
-                    }
-                    else if (currentLeftStickY <= deadZoneVertical && previousLeftStickY > deadZoneVertical)
-                    {
-                        // _logger.WriteLine("Up just released");
                         UndoUpAttack();
-                    }
-                    
-                    if (currentLeftStickY < deadZoneVertical * (-1) && (currentButtons & specialAttackKeybind) == 0)
-                    {
-                        // _logger.WriteLine("Down pressed");
-                        DoDownAttack();
-                    }
-                    else if (currentLeftStickY >= deadZoneVertical * (-1) && previousLeftStickY < deadZoneVertical * (-1))
-                    {
-                        // _logger.WriteLine("Down just released");
                         UndoDownAttack();
                     }
 
-                    if ((currentButtons & alternateComboKeybind) != 0 && (previousButtons & alternateComboKeybind) == 0)
-                    {
-                        DoComboFinisher();
-                    }
-                    else if ((currentButtons & alternateComboKeybind) == 0 && (previousButtons & alternateComboKeybind) != 0)
-                    {
-                        UndoComboFinisher();
-                    }
-
-                    if ((currentButtons & flyUpKeybind) != 0 && (previousButtons & flyUpKeybind) == 0)
-                    {
-                        DoFlyDown();
-                    }
-                    if ((currentButtons & flyDownKeybind) == 0 && (previousButtons & flyDownKeybind) != 0)
-                    {
-                        UndoFlyDown();
-                    }
-    
-                    previousButtons = currentButtons;
-                    previousLeftStickY = currentLeftStickY;
-                }
-                else
-                {
-                    Thread.Sleep(1000); //Prevent stuttering
+                    isDirectionalHeld = false;
                 }
             }
+            else
+            {
+                isDirectionalHeld = true;
+            }
+
+            if (currentLeftStickY > deadZoneVertical && !isTriggerHeld && isDirectionalHeld)
+            {
+                DoUpAttack();
+            }
+            else if (currentLeftStickY <= deadZoneVertical && previousLeftStickY > deadZoneVertical)
+            {
+                UndoUpAttack();
+            }
+            
+            if (currentLeftStickY < deadZoneVertical * (-1) && !isTriggerHeld && isDirectionalHeld)
+            {
+                DoDownAttack();
+            }
+            else if (currentLeftStickY >= deadZoneVertical * (-1) && previousLeftStickY < deadZoneVertical * (-1))
+            {
+                UndoDownAttack();
+            }
+
+            if ((currentButtons & alternateComboKeybind) != 0 && (previousButtons & alternateComboKeybind) == 0)
+            {
+                DoComboFinisher();
+            }
+            else if ((currentButtons & alternateComboKeybind) == 0 && (previousButtons & alternateComboKeybind) != 0)
+            {
+                UndoComboFinisher();
+            }
+
+            // if ((currentButtons & flyDownKeybind) != 0 && (previousButtons & flyDownKeybind) == 0)
+            // {
+            //     DoFlyDown();
+            // }
+            // if ((currentButtons & flyDownKeybind) == 0 && (previousButtons & flyDownKeybind) != 0)
+            // {
+            //     UndoFlyDown();
+            // }
+            
+            previousButtons = currentButtons;
+            previousLeftTrigger = currentLeftTrigger;
+            previousRightTrigger = currentRightTrigger;
+            previousLeftStickY = currentLeftStickY;
         }
+
+        _logger.WriteLine($"[{_modConfig.ModId}] XInput Gamepad not found. Is it compatible with XInput?", _logger.ColorYellow);
+        _logger.WriteLine($"[{_modConfig.ModId}] After connecting your controller, open and close the mod configuration menu to try again", _logger.ColorYellow);
     }
 
     private void DualSenseInputThread()
     {
-        if (DualSense.EnumerateControllers().Count() == 0)
-        {
-            _logger.WriteLine($"[{_modConfig.ModId}] DualSense not found.", _logger.ColorYellow);
-        }
-        else
-        {
-            dualSense = DualSense.EnumerateControllers().First();
-        }
-
         bool previousSpecialButton = false;
         bool previousFinisherButton = false;
-        float previousTrigger = 0.0f;
+        bool previousDirectionalHoldButton = false;
+        float previousLeftTrigger = 0.0f;
+        float previousRightTrigger = 0.0f;
         float previousLeftStickY = 0.0f;
 
-        bool previousFlyUp = false;
-        bool previousFlyDown = false;
-
-        float deadZoneVertical = _configuration.deadZoneVerticalDualSense;
-        float deadZoneR2 = _configuration.deadZoneR2DualSense;
-        ButtonTriggerFlags specialAttackKeybind = _configuration.specialAttackKeybind;
-        ButtonFlags alternateComboKeybind = _configuration.alternateComboKeybind;
-
-        if (_configuration.specialAttackKeybind == ButtonTriggerFlags.LeftTrigger || _configuration.specialAttackKeybind == ButtonTriggerFlags.RightTrigger)
+        if (DualSense.EnumerateControllers().Count() > 0)
         {
-            while(true)
+            dualSense = DualSense.EnumerateControllers().First();
+            dualSense.Acquire();
+    
+            float deadZoneVertical = _configuration.deadZoneVerticalDualSense;
+            float deadZoneR2 = _configuration.deadZoneR2DualSense;
+
+            bool isTriggerHeld = false;
+            bool isDirectionalHeld = false;
+    
+            dualSense.OnStatePolled += (sender) =>
             {
-                if (DualSense.EnumerateControllers().Count() > 0)
+                var state = sender.InputState;
+                float currentLeftStickY = state.LeftAnalogStick.Y;
+    
+                bool[] currentButtons = GetDualSenseKeys(state);
+                bool currentSpecialButton = currentButtons[0];
+                bool currentFinisherButton = currentButtons[1];
+                bool currentDirectionalHoldButton = currentButtons[2];
+                
+                float currentLeftTrigger = state.L2;
+                float currentRightTrigger = state.R2;
+    
+                if (_configuration.specialAttackKeybind == ButtonTriggerFlags.LeftTrigger)
                 {
-                    _logger.WriteLine($"[{_modConfig.ModId}] DualSense connected.");
-                    
-                    dualSense = DualSense.EnumerateControllers().First();
-
-                    dualSense!.Acquire();
-
-                    dualSense.OnStatePolled += (sender) =>
+                    if (currentLeftTrigger > deadZoneR2 && previousLeftTrigger <= deadZoneR2)
                     {
-                        var state = sender.InputState;
-
-                        float currentLeftStickY = state.LeftAnalogStick.Y;
-                        float currentTrigger;
-                        bool currentFinisherButton = false;
-
-                        bool currentFlyUp = false;
-                        bool currentFlyDown = false;
-
-                        if (_configuration.specialAttackKeybind == ButtonTriggerFlags.LeftTrigger)
-                            currentTrigger = state.L2;
-                        else
-                            currentTrigger = state.R2;
-                        
-                        switch (_configuration.alternateComboKeybind)
+                        DoSpecialAttack();
+                        isTriggerHeld = true;
+                    }
+                    else if (currentLeftTrigger <= deadZoneR2 && previousLeftTrigger > deadZoneR2)
+                    {
+                        UndoSpecialAttack();
+                        isTriggerHeld = false;
+                    }
+                }
+    
+                if (_configuration.specialAttackKeybind == ButtonTriggerFlags.RightTrigger)
+                {
+                    if (currentRightTrigger > deadZoneR2 && previousRightTrigger <= deadZoneR2)
+                    {
+                        DoSpecialAttack();
+                        isTriggerHeld = true;
+                    }
+                    else if (currentRightTrigger <= deadZoneR2 && previousRightTrigger > deadZoneR2)
+                    {
+                        UndoSpecialAttack();
+                        isTriggerHeld = false;
+                    }
+                }
+                
+                if (_configuration.specialAttackKeybind != ButtonTriggerFlags.LeftTrigger && _configuration.specialAttackKeybind != ButtonTriggerFlags.RightTrigger)
+                {
+                    if (currentSpecialButton && !previousSpecialButton)
+                    {
+                        DoSpecialAttack();
+                        isTriggerHeld = true;
+                    }
+                    else if (!currentSpecialButton && previousSpecialButton)
+                    {
+                        UndoSpecialAttack();
+                        isTriggerHeld = false;
+                    }    
+                }
+    
+                if (_configuration.isDirectionalButtonHold)
+                {
+                    if (currentDirectionalHoldButton && !previousDirectionalHoldButton)
+                    {
+                        isDirectionalHeld = true;
+                    }
+                    else if (!currentDirectionalHoldButton && previousDirectionalHoldButton)
+                    {
+                        if (!isTriggerHeld)
                         {
-                            case ButtonFlags.DPadUp:
-                                currentFinisherButton = state.DPadUpButton;
-                                break;
-                            case ButtonFlags.DPadDown:
-                                currentFinisherButton = state.DPadDownButton;
-                                break;
-                            case ButtonFlags.DPadLeft:
-                                currentFinisherButton = state.DPadLeftButton;
-                                break;
-                            case ButtonFlags.DPadRight:
-                                currentFinisherButton = state.DPadRightButton;
-                                break;
-                            case ButtonFlags.LeftBumper:
-                                currentFinisherButton = state.L1Button;
-                                break;
-                            case ButtonFlags.RightBumper:
-                                currentFinisherButton = state.R1Button;
-                                break;
-                            case ButtonFlags.LeftThumb:
-                                currentFinisherButton = state.L3Button;
-                                break;
-                            case ButtonFlags.RightThumb:
-                                currentFinisherButton = state.R3Button;
-                                break;
-                            case ButtonFlags.Start:
-                                currentFinisherButton = state.MenuButton;
-                                break;
-                            case ButtonFlags.Select:
-                                currentFinisherButton = state.TouchpadButton;
-                                break;
-                            case ButtonFlags.X_Square:
-                                currentFinisherButton = state.SquareButton;
-                                break;
-                            case ButtonFlags.Y_Triangle:
-                                currentFinisherButton = state.TriangleButton;
-                                break;
-                            case ButtonFlags.A_Cross:
-                                currentFinisherButton = state.CrossButton;
-                                break;
-                            case ButtonFlags.B_Circle:
-                                currentFinisherButton = state.CircleButton;
-                                break;
-                        }
-
-                        switch (_configuration.flyUpKeybindController)
-                        {
-                            case ButtonFlags.DPadUp:
-                                currentFlyUp = state.DPadUpButton;
-                                break;
-                            case ButtonFlags.DPadDown:
-                                currentFlyUp = state.DPadDownButton;
-                                break;
-                            case ButtonFlags.DPadLeft:
-                                currentFlyUp = state.DPadLeftButton;
-                                break;
-                            case ButtonFlags.DPadRight:
-                                currentFlyUp = state.DPadRightButton;
-                                break;
-                            case ButtonFlags.LeftBumper:
-                                currentFlyUp = state.L1Button;
-                                break;
-                            case ButtonFlags.RightBumper:
-                                currentFlyUp = state.R1Button;
-                                break;
-                            case ButtonFlags.LeftThumb:
-                                currentFlyUp = state.L3Button;
-                                break;
-                            case ButtonFlags.RightThumb:
-                                currentFlyUp = state.R3Button;
-                                break;
-                            case ButtonFlags.Start:
-                                currentFlyUp = state.MenuButton;
-                                break;
-                            case ButtonFlags.Select:
-                                currentFlyUp = state.TouchpadButton;
-                                break;
-                            case ButtonFlags.X_Square:
-                                currentFlyUp = state.SquareButton;
-                                break;
-                            case ButtonFlags.Y_Triangle:
-                                currentFlyUp = state.TriangleButton;
-                                break;
-                            case ButtonFlags.A_Cross:
-                                currentFlyUp = state.CrossButton;
-                                break;
-                            case ButtonFlags.B_Circle:
-                                currentFlyUp = state.CircleButton;
-                                break;
-                        }
-
-                        switch (_configuration.flyDownKeybindController)
-                        {
-                            case ButtonFlags.DPadUp:
-                                currentFlyDown = state.DPadUpButton;
-                                break;
-                            case ButtonFlags.DPadDown:
-                                currentFlyDown = state.DPadDownButton;
-                                break;
-                            case ButtonFlags.DPadLeft:
-                                currentFlyDown = state.DPadLeftButton;
-                                break;
-                            case ButtonFlags.DPadRight:
-                                currentFlyDown = state.DPadRightButton;
-                                break;
-                            case ButtonFlags.LeftBumper:
-                                currentFlyDown = state.L1Button;
-                                break;
-                            case ButtonFlags.RightBumper:
-                                currentFlyDown = state.R1Button;
-                                break;
-                            case ButtonFlags.LeftThumb:
-                                currentFlyDown = state.L3Button;
-                                break;
-                            case ButtonFlags.RightThumb:
-                                currentFlyDown = state.R3Button;
-                                break;
-                            case ButtonFlags.Start:
-                                currentFlyDown = state.MenuButton;
-                                break;
-                            case ButtonFlags.Select:
-                                currentFlyDown = state.TouchpadButton;
-                                break;
-                            case ButtonFlags.X_Square:
-                                currentFlyDown = state.SquareButton;
-                                break;
-                            case ButtonFlags.Y_Triangle:
-                                currentFlyDown = state.TriangleButton;
-                                break;
-                            case ButtonFlags.A_Cross:
-                                currentFlyDown = state.CrossButton;
-                                break;
-                            case ButtonFlags.B_Circle:
-                                currentFlyDown = state.CircleButton;
-                                break;
-                        }
-                        
-                        if (currentTrigger > deadZoneR2)
-                        {
-                            if (previousTrigger <= deadZoneR2)
-                            {
-                                // _logger.WriteLine("RT just pressed!");
-                                DoSpecialAttack();
-
-                                // if (currentFlyUp && !previousFlyUp)
-                                // {
-                                //     DoFlyUp();
-                                // }
-                                // if (!currentFlyUp && previousFlyUp)
-                                // {
-                                //     UndoFlyUp();
-                                // }
-                            }
-                        }
-                        else
-                        {
-                            if (previousTrigger > deadZoneR2)
-                            {
-                                // _logger.WriteLine("RT just released!");
-                                UndoSpecialAttack();
-                                    
-                                // UndoFlyUp();
-                                // UndoFlyDown();
-                            }
-                        }
-        
-                        if (currentLeftStickY > deadZoneVertical && currentTrigger <= deadZoneR2)
-                        {
-                            // _logger.WriteLine("Up pressed");
-                            DoUpAttack();
-                        }
-                        else if (currentLeftStickY <= deadZoneVertical && previousLeftStickY > deadZoneVertical)
-                        {
-                            // _logger.WriteLine("Up just released");
                             UndoUpAttack();
-                        }
-                        
-                        if (currentLeftStickY < deadZoneVertical * (-1) && currentTrigger <= deadZoneR2)
-                        {
-                            // _logger.WriteLine("Down pressed");
-                            DoDownAttack();
-                        }
-                        else if (currentLeftStickY >= deadZoneVertical * (-1) && previousLeftStickY < deadZoneVertical * (-1))
-                        {
-                            // _logger.WriteLine("Down just released");
                             UndoDownAttack();
                         }
-        
-                        if (currentFinisherButton && !previousFinisherButton)
-                        {
-                            DoComboFinisher();
-                        }
-                        else if (!currentFinisherButton && previousFinisherButton)
-                        {
-                            UndoComboFinisher();
-                        }
-
-                        if (currentFlyDown && !previousFlyDown)
-                        {
-                            DoFlyDown();
-                        }
-                        if (!currentFlyDown && previousFlyDown)
-                        {
-                            UndoFlyDown();
-                        }
-        
-                        previousFinisherButton = currentFinisherButton;
-                        previousTrigger = currentTrigger;
-                        previousLeftStickY = currentLeftStickY;
-                        previousFlyDown = currentFlyDown;
-                    };
-                    if (!isPolling)
-                        dualSense.BeginPolling(20);
-                    isPolling = true;
-                    while (DualSense.EnumerateControllers().Count() > 0)
-                        Console.ReadLine();
-                    dualSense.EndPolling();
-                    dualSense.Release();
+    
+                        isDirectionalHeld = false;
+                    }
                 }
                 else
                 {
-                    Thread.Sleep(1000); //Prevent stuttering
+                    isDirectionalHeld = true;
                 }
-            }
+    
+                if (currentLeftStickY > deadZoneVertical && !isTriggerHeld && isDirectionalHeld)
+                {
+                    DoUpAttack();
+                }
+                else if (currentLeftStickY <= deadZoneVertical && previousLeftStickY >= deadZoneVertical && !isTriggerHeld)
+                {
+                    UndoUpAttack();
+                }
+                
+                if (currentLeftStickY < deadZoneVertical * (-1) && !isTriggerHeld && isDirectionalHeld)
+                {
+                    DoDownAttack();
+                }
+                else if (currentLeftStickY >= deadZoneVertical * (-1) && previousLeftStickY < deadZoneVertical * (-1) && !isTriggerHeld)
+                {
+                    UndoDownAttack();
+                }
+
+                if (currentFinisherButton && !previousFinisherButton)
+                {
+                    DoComboFinisher();
+                }
+                else if (!currentFinisherButton && previousFinisherButton)
+                {
+                    UndoComboFinisher();
+                }
+    
+                previousSpecialButton = currentSpecialButton;
+                previousFinisherButton = currentFinisherButton;
+                previousLeftStickY = currentLeftStickY;
+                previousDirectionalHoldButton = currentDirectionalHoldButton;
+                previousLeftTrigger = currentLeftTrigger;
+                previousRightTrigger = currentRightTrigger;
+            };
         }
-        else
+
+        if (DualSense.EnumerateControllers().Count() > 0)
         {
-            while(true)
+            dualSense!.BeginPolling(_configuration.dualSensePollingRate);
+            while (DualSense.EnumerateControllers().Count() > 0 && _configuration.isDualSenseEnabled)
             {
-                if (DualSense.EnumerateControllers().Count() > 0)
-                {
-                    _logger.WriteLine($"[{_modConfig.ModId}] DualSense connected.");
-
-                    dualSense = DualSense.EnumerateControllers().First();
-
-                    dualSense.Acquire();
-
-                    dualSense.OnStatePolled += (sender) =>
-                    {
-                        var state = sender.InputState;
-
-                        float currentLeftStickY = state.LeftAnalogStick.Y;
-                        bool currentFinisherButton = false;
-                        bool currentSpecialButton = false;
-
-                        bool currentFlyUp = false;
-                        bool currentFlyDown = false;
-                        
-                        switch (_configuration.specialAttackKeybind)
-                        {
-                            case ButtonTriggerFlags.DPadUp:
-                                currentSpecialButton = state.DPadUpButton;
-                                break;
-                            case ButtonTriggerFlags.DPadDown:
-                                currentSpecialButton = state.DPadDownButton;
-                                break;
-                            case ButtonTriggerFlags.DPadLeft:
-                                currentSpecialButton = state.DPadLeftButton;
-                                break;
-                            case ButtonTriggerFlags.DPadRight:
-                                currentSpecialButton = state.DPadRightButton;
-                                break;
-                            case ButtonTriggerFlags.LeftBumper:
-                                currentSpecialButton = state.L1Button;
-                                break;
-                            case ButtonTriggerFlags.RightBumper:
-                                currentSpecialButton = state.R1Button;
-                                break;
-                            case ButtonTriggerFlags.LeftThumb:
-                                currentSpecialButton = state.L3Button;
-                                break;
-                            case ButtonTriggerFlags.RightThumb:
-                                currentSpecialButton = state.R3Button;
-                                break;
-                            case ButtonTriggerFlags.Start:
-                                currentSpecialButton = state.MenuButton;
-                                break;
-                            case ButtonTriggerFlags.Select:
-                                currentSpecialButton = state.TouchpadButton;
-                                break;
-                            case ButtonTriggerFlags.X_Square:
-                                currentSpecialButton = state.SquareButton;
-                                break;
-                            case ButtonTriggerFlags.Y_Triangle:
-                                currentSpecialButton = state.TriangleButton;
-                                break;
-                            case ButtonTriggerFlags.A_Cross:
-                                currentSpecialButton = state.CrossButton;
-                                break;
-                            case ButtonTriggerFlags.B_Circle:
-                                currentSpecialButton = state.CircleButton;
-                                break;
-                        }
-
-                        switch (_configuration.alternateComboKeybind)
-                        {
-                            case ButtonFlags.DPadUp:
-                                currentFinisherButton = state.DPadUpButton;
-                                break;
-                            case ButtonFlags.DPadDown:
-                                currentFinisherButton = state.DPadDownButton;
-                                break;
-                            case ButtonFlags.DPadLeft:
-                                currentFinisherButton = state.DPadLeftButton;
-                                break;
-                            case ButtonFlags.DPadRight:
-                                currentFinisherButton = state.DPadRightButton;
-                                break;
-                            case ButtonFlags.LeftBumper:
-                                currentFinisherButton = state.L1Button;
-                                break;
-                            case ButtonFlags.RightBumper:
-                                currentFinisherButton = state.R1Button;
-                                break;
-                            case ButtonFlags.LeftThumb:
-                                currentFinisherButton = state.L3Button;
-                                break;
-                            case ButtonFlags.RightThumb:
-                                currentFinisherButton = state.R3Button;
-                                break;
-                            case ButtonFlags.Start:
-                                currentFinisherButton = state.MenuButton;
-                                break;
-                            case ButtonFlags.Select:
-                                currentFinisherButton = state.TouchpadButton;
-                                break;
-                            case ButtonFlags.X_Square:
-                                currentFinisherButton = state.SquareButton;
-                                break;
-                            case ButtonFlags.Y_Triangle:
-                                currentFinisherButton = state.TriangleButton;
-                                break;
-                            case ButtonFlags.A_Cross:
-                                currentFinisherButton = state.CrossButton;
-                                break;
-                            case ButtonFlags.B_Circle:
-                                currentFinisherButton = state.CircleButton;
-                                break;
-                        }
-
-                        switch (_configuration.flyUpKeybindController)
-                        {
-                            case ButtonFlags.DPadUp:
-                                currentFlyUp = state.DPadUpButton;
-                                break;
-                            case ButtonFlags.DPadDown:
-                                currentFlyUp = state.DPadDownButton;
-                                break;
-                            case ButtonFlags.DPadLeft:
-                                currentFlyUp = state.DPadLeftButton;
-                                break;
-                            case ButtonFlags.DPadRight:
-                                currentFlyUp = state.DPadRightButton;
-                                break;
-                            case ButtonFlags.LeftBumper:
-                                currentFlyUp = state.L1Button;
-                                break;
-                            case ButtonFlags.RightBumper:
-                                currentFlyUp = state.R1Button;
-                                break;
-                            case ButtonFlags.LeftThumb:
-                                currentFlyUp = state.L3Button;
-                                break;
-                            case ButtonFlags.RightThumb:
-                                currentFlyUp = state.R3Button;
-                                break;
-                            case ButtonFlags.Start:
-                                currentFlyUp = state.MenuButton;
-                                break;
-                            case ButtonFlags.Select:
-                                currentFlyUp = state.TouchpadButton;
-                                break;
-                            case ButtonFlags.X_Square:
-                                currentFlyUp = state.SquareButton;
-                                break;
-                            case ButtonFlags.Y_Triangle:
-                                currentFlyUp = state.TriangleButton;
-                                break;
-                            case ButtonFlags.A_Cross:
-                                currentFlyUp = state.CrossButton;
-                                break;
-                            case ButtonFlags.B_Circle:
-                                currentFlyUp = state.CircleButton;
-                                break;
-                        }
-
-                        switch (_configuration.flyDownKeybindController)
-                        {
-                            case ButtonFlags.DPadUp:
-                                currentFlyDown = state.DPadUpButton;
-                                break;
-                            case ButtonFlags.DPadDown:
-                                currentFlyDown = state.DPadDownButton;
-                                break;
-                            case ButtonFlags.DPadLeft:
-                                currentFlyDown = state.DPadLeftButton;
-                                break;
-                            case ButtonFlags.DPadRight:
-                                currentFlyDown = state.DPadRightButton;
-                                break;
-                            case ButtonFlags.LeftBumper:
-                                currentFlyDown = state.L1Button;
-                                break;
-                            case ButtonFlags.RightBumper:
-                                currentFlyDown = state.R1Button;
-                                break;
-                            case ButtonFlags.LeftThumb:
-                                currentFlyDown = state.L3Button;
-                                break;
-                            case ButtonFlags.RightThumb:
-                                currentFlyDown = state.R3Button;
-                                break;
-                            case ButtonFlags.Start:
-                                currentFlyDown = state.MenuButton;
-                                break;
-                            case ButtonFlags.Select:
-                                currentFlyDown = state.TouchpadButton;
-                                break;
-                            case ButtonFlags.X_Square:
-                                currentFlyDown = state.SquareButton;
-                                break;
-                            case ButtonFlags.Y_Triangle:
-                                currentFlyDown = state.TriangleButton;
-                                break;
-                            case ButtonFlags.A_Cross:
-                                currentFlyDown = state.CrossButton;
-                                break;
-                            case ButtonFlags.B_Circle:
-                                currentFlyDown = state.CircleButton;
-                                break;
-                        }
-                        
-                        if (currentSpecialButton)
-                        {
-                            // _logger.WriteLine("RT just pressed!");
-                            DoSpecialAttack();
-
-                            // if (currentFlyUp && !previousFlyUp)
-                            // {
-                            //     DoFlyUp();
-                            // }
-                            // if (!currentFlyUp && previousFlyUp)
-                            // {
-                            //     UndoFlyUp();
-                            // }
-                        }
-                        else if (previousSpecialButton)
-                        {
-                            // _logger.WriteLine("RT just released!");
-                            UndoSpecialAttack();
-
-                            // UndoFlyUp();
-                            // UndoFlyDown();
-                        }
-
-                        if (currentLeftStickY > deadZoneVertical && !currentSpecialButton)
-                        {
-                            // _logger.WriteLine("Up pressed");
-                            DoUpAttack();
-                        }
-                        else if (currentLeftStickY <= deadZoneVertical && previousLeftStickY > deadZoneVertical)
-                        {
-                            // _logger.WriteLine("Up just released");
-                            UndoUpAttack();
-                        }
-                        
-                        if (currentLeftStickY < deadZoneVertical * (-1) && !currentSpecialButton)
-                        {
-                            // _logger.WriteLine("Down pressed");
-                            DoDownAttack();
-                        }
-                        else if (currentLeftStickY >= deadZoneVertical * (-1) && previousLeftStickY < deadZoneVertical * (-1))
-                        {
-                            // _logger.WriteLine("Down just released");
-                            UndoDownAttack();
-                        }
-        
-                        if (currentFinisherButton && !previousFinisherButton)
-                        {
-                            DoComboFinisher();
-                        }
-                        else if (!currentFinisherButton && previousFinisherButton)
-                        {
-                            UndoComboFinisher();
-                        }
-
-                        if (currentFlyDown && !previousFlyDown)
-                        {
-                            DoFlyDown();
-                        }
-                        if (!currentFlyDown && previousFlyDown)
-                        {
-                            UndoFlyDown();
-                        }
-
-                        previousSpecialButton = currentSpecialButton;
-                        previousFinisherButton = currentFinisherButton;
-                        previousLeftStickY = currentLeftStickY;
-                        previousFlyDown = currentFlyDown;
-                    };
-                    dualSense.BeginPolling(20);
-                    while (DualSense.EnumerateControllers().Count() > 0)
-                        Console.ReadLine();
-                    dualSense.EndPolling();
-                    dualSense.Release();
-                }
-                else
-                {
-                    Thread.Sleep(1000); //Prevent stuttering
-                }
+                //do nothing
             }
+            dualSense.EndPolling();
+            dualSense.Release();
         }
+        
+        _logger.WriteLine($"[{_modConfig.ModId}] DualSense not found", _logger.ColorYellow);
+        _logger.WriteLine($"[{_modConfig.ModId}] After connecting your controller, open and close the mod configuration menu to try again", _logger.ColorYellow);
     }
 
     private void DoUpAttack()
@@ -1511,6 +1063,11 @@ public class Mod : ModBase // <= Do not Remove.
         row = summonmodeTable.GetRow(10);
 
         row!.SetInt32((uint)summonmodeLayout.Columns[column].Offset, 3103);
+
+        //Titanic Block
+        row = summonmodeTable.GetRow(3);
+
+        row!.SetInt32((uint)summonmodeLayout.Columns[column].Offset, 3102);
         
         //PLAYERCOMMANDBUILDER
 
@@ -1645,6 +1202,11 @@ public class Mod : ModBase // <= Do not Remove.
         row = summonmodeTable.GetRow(10);
 
         row!.SetInt32((uint)summonmodeLayout.Columns[column].Offset, 3108);
+
+        //Titanic Block
+        row = summonmodeTable.GetRow(3);
+
+        row!.SetInt32((uint)summonmodeLayout.Columns[column].Offset, 236);
         
         //PLAYERCOMMANDBUILDER
 
@@ -1840,6 +1402,33 @@ public class Mod : ModBase // <= Do not Remove.
                 // else
                 //     row.SetInt32((uint)comboLayout.Columns[column].Offset, airLBBurstVanilla[i]);       
             }     
+
+            row = comboTable!.GetRow(24, i)!;   //Key1 24 is Berserker combo
+
+            column = "Unk2";
+
+            row.SetInt32((uint)comboLayout.Columns[column].Offset, groundBase[i]);
+            
+            // column = "Unk8";
+
+            // if (row!.GetInt32((uint)comboLayout.Columns[column].Offset) == groundLBBurstVanilla[i])
+            //     row.SetInt32((uint)comboLayout.Columns[column].Offset, groundLBBurst[i]);
+            // else
+            //     row.SetInt32((uint)comboLayout.Columns[column].Offset, groundLBBurstVanilla[i]);
+
+            if (i < 3)  //Check to prevent index going outside array range for air combo
+            {
+                column = "Unk5";
+
+                row.SetInt32((uint)comboLayout.Columns[column].Offset, airBase[i]);
+
+                // column = "Unk9";
+
+                // if (row!.GetInt32((uint)comboLayout.Columns[column].Offset) == airLBBurstVanilla[i])
+                //     row.SetInt32((uint)comboLayout.Columns[column].Offset, airLBBurst[i]);
+                // else
+                //     row.SetInt32((uint)comboLayout.Columns[column].Offset, airLBBurstVanilla[i]);       
+            }   
         }
 
         // Override eikonic abilities
@@ -1933,7 +1522,20 @@ public class Mod : ModBase // <= Do not Remove.
                 column = "Unk5";
 
                 row.SetInt32((uint)comboLayout.Columns[column].Offset, airLBVanilla[i]);
-            }     
+            }
+
+            row = comboTable!.GetRow(24, i)!;   //Key1 24 is Berserker combo
+
+            column = "Unk2";
+
+            row.SetInt32((uint)comboLayout.Columns[column].Offset, groundLBVanilla[i]);
+
+            if (i < 3)  //Check to prevent index going outside array range for air combo
+            {
+                column = "Unk5";
+
+                row.SetInt32((uint)comboLayout.Columns[column].Offset, airLBVanilla[i]);
+            }      
         }
 
         // Override Logos abilities
@@ -2118,6 +1720,155 @@ public class Mod : ModBase // <= Do not Remove.
         row.SetInt32((uint)playercommandbuilderLayout.Columns["Unk20"].Offset, 302);
     }
 
+    private bool[] GetDualSenseKeys(DualSenseAPI.State.DualSenseInputState state)
+    {
+        bool currentSpecialButton = false;
+        bool currentFinisherButton = false;
+        bool currentDirectionalHoldButton = false;
+        // bool currentFlyDown;
+        // bool currentFlyUp;
+
+        switch (_configuration.specialAttackKeybind)
+        {
+            case ButtonTriggerFlags.DPadUp:
+                currentSpecialButton = state.DPadUpButton;
+                break;
+            case ButtonTriggerFlags.DPadDown:
+                currentSpecialButton = state.DPadDownButton;
+                break;
+            case ButtonTriggerFlags.DPadLeft:
+                currentSpecialButton = state.DPadLeftButton;
+                break;
+            case ButtonTriggerFlags.DPadRight:
+                currentSpecialButton = state.DPadRightButton;
+                break;
+            case ButtonTriggerFlags.LeftBumper:
+                currentSpecialButton = state.L1Button;
+                break;
+            case ButtonTriggerFlags.RightBumper:
+                currentSpecialButton = state.R1Button;
+                break;
+            case ButtonTriggerFlags.LeftThumb:
+                currentSpecialButton = state.L3Button;
+                break;
+            case ButtonTriggerFlags.RightThumb:
+                currentSpecialButton = state.R3Button;
+                break;
+            case ButtonTriggerFlags.Start:
+                currentSpecialButton = state.MenuButton;
+                break;
+            case ButtonTriggerFlags.Select:
+                currentSpecialButton = state.TouchpadButton;
+                break;
+            case ButtonTriggerFlags.X_Square:
+                currentSpecialButton = state.SquareButton;
+                break;
+            case ButtonTriggerFlags.Y_Triangle:
+                currentSpecialButton = state.TriangleButton;
+                break;
+            case ButtonTriggerFlags.A_Cross:
+                currentSpecialButton = state.CrossButton;
+                break;
+            case ButtonTriggerFlags.B_Circle:
+                currentSpecialButton = state.CircleButton;
+                break;
+        }
+
+        switch (_configuration.alternateComboKeybind)
+        {
+            case ButtonFlags.DPadUp:
+                currentFinisherButton = state.DPadUpButton;
+                break;
+            case ButtonFlags.DPadDown:
+                currentFinisherButton = state.DPadDownButton;
+                break;
+            case ButtonFlags.DPadLeft:
+                currentFinisherButton = state.DPadLeftButton;
+                break;
+            case ButtonFlags.DPadRight:
+                currentFinisherButton = state.DPadRightButton;
+                break;
+            case ButtonFlags.LeftBumper:
+                currentFinisherButton = state.L1Button;
+                break;
+            case ButtonFlags.RightBumper:
+                currentFinisherButton = state.R1Button;
+                break;
+            case ButtonFlags.LeftThumb:
+                currentFinisherButton = state.L3Button;
+                break;
+            case ButtonFlags.RightThumb:
+                currentFinisherButton = state.R3Button;
+                break;
+            case ButtonFlags.Start:
+                currentFinisherButton = state.MenuButton;
+                break;
+            case ButtonFlags.Select:
+                currentFinisherButton = state.TouchpadButton;
+                break;
+            case ButtonFlags.X_Square:
+                currentFinisherButton = state.SquareButton;
+                break;
+            case ButtonFlags.Y_Triangle:
+                currentFinisherButton = state.TriangleButton;
+                break;
+            case ButtonFlags.A_Cross:
+                currentFinisherButton = state.CrossButton;
+                break;
+            case ButtonFlags.B_Circle:
+                currentFinisherButton = state.CircleButton;
+                break;
+        }
+
+        switch (_configuration.directionalHoldKeybind)
+        {
+            case ButtonFlags.DPadUp:
+                currentDirectionalHoldButton = state.DPadUpButton;
+                break;
+            case ButtonFlags.DPadDown:
+                currentDirectionalHoldButton = state.DPadDownButton;
+                break;
+            case ButtonFlags.DPadLeft:
+                currentDirectionalHoldButton = state.DPadLeftButton;
+                break;
+            case ButtonFlags.DPadRight:
+                currentDirectionalHoldButton = state.DPadRightButton;
+                break;
+            case ButtonFlags.LeftBumper:
+                currentDirectionalHoldButton = state.L1Button;
+                break;
+            case ButtonFlags.RightBumper:
+                currentDirectionalHoldButton = state.R1Button;
+                break;
+            case ButtonFlags.LeftThumb:
+                currentDirectionalHoldButton = state.L3Button;
+                break;
+            case ButtonFlags.RightThumb:
+                currentDirectionalHoldButton = state.R3Button;
+                break;
+            case ButtonFlags.Start:
+                currentDirectionalHoldButton = state.MenuButton;
+                break;
+            case ButtonFlags.Select:
+                currentDirectionalHoldButton = state.TouchpadButton;
+                break;
+            case ButtonFlags.X_Square:
+                currentDirectionalHoldButton = state.SquareButton;
+                break;
+            case ButtonFlags.Y_Triangle:
+                currentDirectionalHoldButton = state.TriangleButton;
+                break;
+            case ButtonFlags.A_Cross:
+                currentDirectionalHoldButton = state.CrossButton;
+                break;
+            case ButtonFlags.B_Circle:
+                currentDirectionalHoldButton = state.CircleButton;
+                break;
+        }
+
+        return [currentSpecialButton, currentFinisherButton, currentDirectionalHoldButton];
+    }
+
     #region Standard Overrides
     public override void ConfigurationUpdated(Config configuration)
     {
@@ -2126,7 +1877,21 @@ public class Mod : ModBase // <= Do not Remove.
         _configuration = configuration;
         _logger.WriteLine($"[{_modConfig.ModId}] Config Updated: Applying");
 
-        ReplaceComboStrings();
+        // ReplaceComboStrings();
+
+        if (_configuration.isControllerEnabled && !controllerInputThread!.IsAlive)
+        {
+            controllerInputThread = new Thread(ControllerInputThread);
+            controllerInputThread.IsBackground = true;
+            controllerInputThread.Start();
+        }
+
+        if (_configuration.isDualSenseEnabled && !dualSenseInputThread!.IsAlive)
+        {
+            dualSenseInputThread = new Thread(DualSenseInputThread);
+            dualSenseInputThread.IsBackground = true;
+            dualSenseInputThread.Start();
+        }
     }
     #endregion
 
