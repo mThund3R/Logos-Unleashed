@@ -27,6 +27,7 @@ public class Startup : IMod
     /// Stores the contents of your mod's configuration. Automatically updated by template.
     /// </summary>
     private Config _configuration = null!;
+    private Extras _extras = null!;
 
     /// <summary>
     /// An interface to Reloaded's the function hooks/detours library.
@@ -62,6 +63,9 @@ public class Startup : IMod
         _configuration = configurator.GetConfiguration<Config>(0);
         _configuration.ConfigurationUpdated += OnConfigurationUpdated;
 
+        _extras = configurator.GetConfiguration<Extras>(1);
+        _extras.ConfigurationUpdated += OnConfigurationUpdated;
+
         // Please put your mod code in the class below,
         // use this class for only interfacing with mod loader.
         _mod = new Mod(new ModContext()
@@ -72,6 +76,7 @@ public class Startup : IMod
             ModConfig = _modConfig,
             Owner = this,
             Configuration = _configuration,
+            Extras = _extras,
         });
     }
 
@@ -83,8 +88,17 @@ public class Startup : IMod
         */
 
         // Replace configuration with new.
-        _configuration = (Config)obj;
-        _mod.ConfigurationUpdated(_configuration);
+
+        if (obj.GetType() == typeof(Config))
+        {
+            _configuration = (Config)obj;
+            _mod.ConfigurationUpdated(_configuration);
+        }
+        else if (obj.GetType() == typeof(Extras))
+        {
+            _extras = (Extras)obj;
+            _mod.ConfigurationUpdated(_extras);
+        }        
     }
 
     /* Mod loader actions. */

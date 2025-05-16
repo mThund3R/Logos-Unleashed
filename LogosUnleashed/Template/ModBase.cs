@@ -67,4 +67,9 @@ public class ModBase
         // Apply settings from configuration.
         // ... your code here.
     }
+
+    public virtual void ConfigurationUpdated(Extras extras)
+    {
+        //
+    }
 }

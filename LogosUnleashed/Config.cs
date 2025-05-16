@@ -117,6 +117,13 @@ public class Config : Configurable<Config>
     [Category(".KeyboardInput")]
     public Key alternateComboKeybindKeyboard { get; set; } = Key.X;
 
+    [DisplayName("[Keyboard] Change Skill Tree Page Keybind [UNUSED]")]
+    [Description("[OUTDATED] Press this keybind, then refresh Skill Tree page to view Logos Unleashed custom skills.\nOn controller, press LB / L1 and RT / R1 together.")]
+    [DefaultValue(Key.RightShift)]
+    [Category(".KeyboardInput")]
+    public Key changeSkillTreeKeybindKeyboard { get; set; } = Key.RightShift;
+
+
     [DisplayName("[Gamepad / DualSense] Special Attack Keybind")]
     [Description("Special (non-directional) attack keybind.")]
     [DefaultValue(ButtonTriggerFlags.RightTrigger)]
@@ -232,8 +239,10 @@ public class Config : Configurable<Config>
     // [DefaultValue(Key.Ctrl)]
     // [Category(".KeyboardInput")]
     // public Key flyDownKeybindKeyboard { get; set; } = Key.Ctrl;
+}
 
-
+public class Extras : Configurable<Extras>
+{
     [DisplayName("Attack I")]
     [DefaultValue(503)]
     [Category("Base / LB Combo String Finisher")]
@@ -242,17 +251,17 @@ public class Config : Configurable<Config>
     [DisplayName("Attack II")]
     [DefaultValue(5103)]
     [Category("Base / LB Combo String Finisher")]
-    public int attack2 { get; set; } = 881; //Odin lunge finisher
+    public int attack2 { get; set; } = 5103; //Odin lunge finisher
 
     [DisplayName("Attack III")]
     [DefaultValue(5106)]
     [Category("Base / LB Combo String Finisher")]
-    public int attack3 { get; set; } = 422; //Garuda Gouge
+    public int attack3 { get; set; } = 5106; //Garuda Gouge
 
     [DisplayName("Attack IV")]
     [DefaultValue(5107)]
     [Category("Base / LB Combo String Finisher")]
-    public int attack4 { get; set; } = 190; //Slash and punch ground finisher
+    public int attack4 { get; set; } = 5107; //Slash and punch ground finisher
 
     // [DisplayName("Magic Burst I")]
     // [DefaultValue(188)]
@@ -323,7 +332,7 @@ public class Config : Configurable<Config>
     [DisplayName("Attack IV")]
     [DefaultValue(5107)]
     [Category("Logos Combo String Finisher")]
-    public int attackLogosFinisher4 { get; set; } = 190; //Slash and punch ground finisher
+    public int attackLogosFinisher4 { get; set; } = 5107; //Slash and punch ground finisher
 
     [DisplayName("Air Attack I")]
     [DefaultValue(506)]
@@ -439,12 +448,38 @@ public class Config : Configurable<Config>
     [DisplayName("Air Attack II")]
     [DefaultValue(158)]
     [Category("Base Combo String")]
-    public int airattack2Base{ get; set; } = 158;
+    public int airattack2Base { get; set; } = 158;
 
     [DisplayName("Air Attack III")]
     [DefaultValue(159)]
     [Category("Base Combo String")]
     public int airattack3Base { get; set; } = 159;
+
+    [DisplayName("Sheathed Attack I")]
+    [DefaultValue(140)]
+    [Category("Base Combo String")]
+    public int sheatedAttackBase { get; set; } = 140;
+
+    [DisplayName("Sheathed Walk Attack I")]
+    [DefaultValue(142)]
+    [Category("Base Combo String")]
+    public int sheatedWalkAttackBase { get; set; } = 142;
+
+    [DisplayName("Sheathed Run Attack I")]
+    [DefaultValue(143)]
+    [Category("Base Combo String")]
+    public int sheatedRunAttackBase { get; set; } = 143;
+
+    [DisplayName("Unsheathed Walk Attack I")]
+    [DefaultValue(141)]
+    [Category("Base Combo String")]
+    public int unsheathedWalkAttackBase { get; set; } = 141;
+
+    [DisplayName("Unk20 Attack I")]
+    [DefaultValue(139)]
+    [Category("Base Combo String")]
+    [Description("Still uncertain on what this does, but it's set to same ActionId as normal Attack I, and so should you")]
+    public int unk20AttackBase { get; set; } = 139;
 
 
     // [DisplayName("Double Slider")]

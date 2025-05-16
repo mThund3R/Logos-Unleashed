@@ -28,6 +28,7 @@ public class ModContext
     /// Provides access to this mod's configuration.
     /// </summary>
     public Config Configuration { get; set; } = null!;
+    public Extras Extras { get; set; } = null!;
 
     /// <summary>
     /// Configuration of this mod.

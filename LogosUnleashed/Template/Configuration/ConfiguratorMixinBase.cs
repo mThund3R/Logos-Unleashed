@@ -18,7 +18,8 @@ public class ConfiguratorMixinBase
         // You can add any Configurable here.
         return new IUpdatableConfigurable[]
         {
-            Configurable<Config>.FromFile(Path.Combine(configFolder, "Config.json"), "Default Config")
+            Configurable<Config>.FromFile(Path.Combine(configFolder, "Config_2.0.0-b4.json"), "Input Configuration (CLICK ME!)"),
+            Configurable<Extras>.FromFile(Path.Combine(configFolder, "Extras_2.0.0-b4.json"), "Combo Configuration (CLICK ME!)")
         };
     }
 
